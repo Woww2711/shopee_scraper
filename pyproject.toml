@@ -1,0 +1,20 @@
+[project]
+name = "shopee-search-tool"
+version = "0.1.0"
+description = "Shopee Top 10 Search and Ranking Tool for Resellers"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "streamlit",
+    "google-genai",
+    "apify-client",
+    "pydantic",
+    "python-dotenv",
+    "pandas",
+    "altair",
+]
+
+[tool.uv]
+dev-dependencies = []
