@@ -2,6 +2,8 @@
 
 Ứng dụng tinh gọn giúp tìm kiếm, phân tích và xếp hạng **Top 10 sản phẩm Shopee tốt nhất** theo thời gian thực. Hệ thống tự động thu thập dữ liệu sản phẩm, xếp hạng bằng mô hình **Gemini AI**, tích hợp sẵn **Rate Limiting (IP)** và lưu trữ đệm **SQLite Cache**.
 
+🌐 **Trải nghiệm trực tuyến tại:** [https://shopeescraper.streamlit.app/](https://shopeescraper.streamlit.app/)
+
 Ứng dụng được thiết kế theo cấu trúc nguyên khối phân tầng (Monolith), cho phép deploy trực tiếp và chạy độc lập chỉ với 1 lệnh duy nhất (thích hợp hoàn hảo cho **Streamlit Community Cloud**).
 
 ---
