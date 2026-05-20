@@ -368,134 +368,134 @@ if search_clicked or st.session_state.trigger_search:
                                 
                             status_box.update(label="✅ Phân tích thành công!", state="complete")
                 
-                duration = round(time.time() - start_time, 2)
+            duration = round(time.time() - start_time, 2)
+            
+            # 2. Hiển thị kết quả ra màn hình
+            if final_data:
+                st.success("✅ Phân tích thành công!")
                 
-                # 2. Hiển thị kết quả ra màn hình
-                if final_data:
-                    st.success("✅ Phân tích thành công!")
-                    
-                    col_m1, col_m2, col_m3 = st.columns(3)
-                    with col_m1:
-                        st.metric(label="Nguồn dữ liệu", value="Cơ sở dữ liệu (Cache)" if is_cached else "Dữ liệu mới (Live)")
-                    with col_m2:
-                        st.metric(label="Thời gian xử lý", value=f"{duration} giây")
-                    with col_m3:
-                        st.metric(label="Số sản phẩm phân tích", value=f"{len(final_data.get('top10', []))} sản phẩm")
+                col_m1, col_m2, col_m3 = st.columns(3)
+                with col_m1:
+                    st.metric(label="Nguồn dữ liệu", value="Cơ sở dữ liệu (Cache)" if is_cached else "Dữ liệu mới (Live)")
+                with col_m2:
+                    st.metric(label="Thời gian xử lý", value=f"{duration} giây")
+                with col_m3:
+                    st.metric(label="Số sản phẩm phân tích", value=f"{len(final_data.get('top10', []))} sản phẩm")
 
-                    # Tóm tắt thị trường từ AI
-                    st.markdown("### 📊 Phân tích xu hướng thị trường (AI Market Insight)")
-                    st.info(final_data.get("market_summary", "Không có tóm tắt thị trường."))
+                # Tóm tắt thị trường từ AI
+                st.markdown("### 📊 Phân tích xu hướng thị trường (AI Market Insight)")
+                st.info(final_data.get("market_summary", "Không có tóm tắt thị trường."))
+                
+                # Danh sách Top 10
+                top10_list = final_data.get("top10", [])
+                st.markdown("### 🏆 Top 10 Sản phẩm Nổi bật nhất")
+                
+                chart_data = []
+                for item in top10_list:
+                    rank = item.get("rank")
+                    name = item.get("name")
+                    price_formatted = item.get("price", {}).get("formatted", "0 ₫")
+                    price_val = item.get("price", {}).get("value", 0)
+                    rating = item.get("rating", 0)
+                    rating_count = item.get("ratingCount", 0)
+                    shop_name = item.get("shopName", "N/A")
+                    location = item.get("location", "N/A")
+                    images = item.get("images", [])
+                    url = item.get("url", "#")
+                    reason = item.get("reason", "")
                     
-                    # Danh sách Top 10
-                    top10_list = final_data.get("top10", [])
-                    st.markdown("### 🏆 Top 10 Sản phẩm Nổi bật nhất")
+                    chart_data.append({
+                        "Sản phẩm": f"#{rank} - {name[:25]}...",
+                        "Giá trị (₫)": price_val,
+                        "Số lượt đánh giá": rating_count,
+                        "Rating": rating
+                    })
                     
-                    chart_data = []
-                    for item in top10_list:
-                        rank = item.get("rank")
-                        name = item.get("name")
-                        price_formatted = item.get("price", {}).get("formatted", "0 ₫")
-                        price_val = item.get("price", {}).get("value", 0)
-                        rating = item.get("rating", 0)
-                        rating_count = item.get("ratingCount", 0)
-                        shop_name = item.get("shopName", "N/A")
-                        location = item.get("location", "N/A")
-                        images = item.get("images", [])
-                        url = item.get("url", "#")
-                        reason = item.get("reason", "")
-                        
-                        chart_data.append({
-                            "Sản phẩm": f"#{rank} - {name[:25]}...",
-                            "Giá trị (₫)": price_val,
-                            "Số lượt đánh giá": rating_count,
-                            "Rating": rating
-                        })
-                        
-                        # Render HTML card
-                        image_url = images[0] if images else "https://via.placeholder.com/150"
-                        if not image_url.startswith(("http://", "https://")):
-                            image_url = "https://via.placeholder.com/150"
-                        
-                        if not url.startswith(("http://", "https://")):
-                            url_cleaned = "#"
-                        else:
-                            url_cleaned = url
+                    # Render HTML card
+                    image_url = images[0] if images else "https://via.placeholder.com/150"
+                    if not image_url.startswith(("http://", "https://")):
+                        image_url = "https://via.placeholder.com/150"
+                    
+                    if not url.startswith(("http://", "https://")):
+                        url_cleaned = "#"
+                    else:
+                        url_cleaned = url
 
-                        # Escape dynamic values to prevent XSS
-                        name_esc = html.escape(name or "")
-                        url_esc = html.escape(url_cleaned or "#")
-                        image_url_esc = html.escape(image_url or "")
-                        price_formatted_esc = html.escape(price_formatted or "")
-                        shop_name_esc = html.escape(shop_name or "")
-                        location_esc = html.escape(location or "")
-                        reason_esc = html.escape(reason or "")
+                    # Escape dynamic values to prevent XSS
+                    name_esc = html.escape(name or "")
+                    url_esc = html.escape(url_cleaned or "#")
+                    image_url_esc = html.escape(image_url or "")
+                    price_formatted_esc = html.escape(price_formatted or "")
+                    shop_name_esc = html.escape(shop_name or "")
+                    location_esc = html.escape(location or "")
+                    reason_esc = html.escape(reason or "")
 
-                        html_content = f"""
-                        <div class="product-row">
-                            <div style="display: flex; align-items: center;">
-                                <div class="rank-badge">#{rank}</div>
+                    html_content = f"""
+                    <div class="product-row">
+                        <div style="display: flex; align-items: center;">
+                            <div class="rank-badge">#{rank}</div>
+                        </div>
+                        <img src="{image_url_esc}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px;" />
+                        <div style="flex: 1;">
+                            <h4 style="margin: 0 0 8px 0;"><a href="{url_esc}" target="_blank" style="color: #FF4B4B; text-decoration: none;">{name_esc}</a></h4>
+                            <div style="margin-bottom: 8px;">
+                                <span class="stat-badge">💰 Giá bán: {price_formatted_esc}</span>
+                                <span class="stat-badge">⭐ Đánh giá: {rating}/5.0</span>
+                                <span class="stat-badge">💬 Phản hồi: {rating_count:,} lượt</span>
                             </div>
-                            <img src="{image_url_esc}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px;" />
-                            <div style="flex: 1;">
-                                <h4 style="margin: 0 0 8px 0;"><a href="{url_esc}" target="_blank" style="color: #FF4B4B; text-decoration: none;">{name_esc}</a></h4>
-                                <div style="margin-bottom: 8px;">
-                                    <span class="stat-badge">💰 Giá bán: {price_formatted_esc}</span>
-                                    <span class="stat-badge">⭐ Đánh giá: {rating}/5.0</span>
-                                    <span class="stat-badge">💬 Phản hồi: {rating_count:,} lượt</span>
-                                </div>
-                                <div style="font-size: 0.85rem; color: #777;">
-                                    🏪 Shop: <strong>{shop_name_esc}</strong> | 📍 Khu vực: <strong>{location_esc}</strong>
-                                </div>
-                                <div class="ai-reason-box">
-                                    💡 <strong>Lý do AI khuyên chọn:</strong> {reason_esc}
-                                </div>
+                            <div style="font-size: 0.85rem; color: #777;">
+                                🏪 Shop: <strong>{shop_name_esc}</strong> | 📍 Khu vực: <strong>{location_esc}</strong>
+                            </div>
+                            <div class="ai-reason-box">
+                                💡 <strong>Lý do AI khuyên chọn:</strong> {reason_esc}
                             </div>
                         </div>
-                        """
-                        st.markdown(html_content, unsafe_allow_html=True)
+                    </div>
+                    """
+                    st.markdown(html_content, unsafe_allow_html=True)
+                
+                # Biểu đồ so sánh
+                st.markdown("### 📈 Biểu đồ so sánh sản phẩm Top 10")
+                df = pd.DataFrame(chart_data)
+                col_chart1, col_chart2 = st.columns(2)
+                
+                with col_chart1:
+                    st.subheader("So sánh giá bán")
+                    bar_chart = alt.Chart(df).mark_bar(color='#FF4B4B').encode(
+                        x=alt.X('Giá trị (₫):Q', title='Giá bán (VND)'),
+                        y=alt.Y('Sản phẩm:N', sort=None, title='Sản phẩm')
+                    ).properties(height=350)
+                    st.altair_chart(bar_chart, width="stretch")
                     
-                    # Biểu đồ so sánh
-                    st.markdown("### 📈 Biểu đồ so sánh sản phẩm Top 10")
-                    df = pd.DataFrame(chart_data)
-                    col_chart1, col_chart2 = st.columns(2)
-                    
-                    with col_chart1:
-                        st.subheader("So sánh giá bán")
-                        bar_chart = alt.Chart(df).mark_bar(color='#FF4B4B').encode(
-                            x=alt.X('Giá trị (₫):Q', title='Giá bán (VND)'),
-                            y=alt.Y('Sản phẩm:N', sort=None, title='Sản phẩm')
-                        ).properties(height=350)
-                        st.altair_chart(bar_chart, width="stretch")
-                        
-                    with col_chart2:
-                        st.subheader("Số lượt đánh giá")
-                        point_chart = alt.Chart(df).mark_bar(color='#FF8C00').encode(
-                            x=alt.X('Số lượt đánh giá:Q', title='Lượt đánh giá (review_count)'),
-                            y=alt.Y('Sản phẩm:N', sort=None, title='Sản phẩm')
-                        ).properties(height=350)
-                        st.altair_chart(point_chart, width="stretch")
+                with col_chart2:
+                    st.subheader("Số lượt đánh giá")
+                    point_chart = alt.Chart(df).mark_bar(color='#FF8C00').encode(
+                        x=alt.X('Số lượt đánh giá:Q', title='Lượt đánh giá (review_count)'),
+                        y=alt.Y('Sản phẩm:N', sort=None, title='Sản phẩm')
+                    ).properties(height=350)
+                    st.altair_chart(point_chart, width="stretch")
 
-                    # Export CSV
-                    st.markdown("### 💾 Xuất dữ liệu")
-                    export_data = []
-                    for item in top10_list:
-                        export_data.append({
-                            "Rank": item.get("rank"),
-                            "Name": item.get("name"),
-                            "Price": item.get("price", {}).get("value"),
-                            "Rating": item.get("rating"),
-                            "Rating Count": item.get("ratingCount"),
-                            "Shop Name": item.get("shopName"),
-                            "Location": item.get("location"),
-                            "AI Reason": item.get("reason"),
-                            "Shopee URL": item.get("url")
-                        })
-                    export_df = pd.DataFrame(export_data)
-                    csv_data = export_df.to_csv(index=False).encode('utf-8-sig')
-                    
-                    st.download_button(
-                        label="📥 Tải Báo Cáo CSV (Excel-ready)",
-                        data=csv_data,
-                        file_name=f"shopee_analysis_{keyword_input.replace(' ', '_')}.csv",
-                        mime="text/csv",
-                    )
+                # Export CSV
+                st.markdown("### 💾 Xuất dữ liệu")
+                export_data = []
+                for item in top10_list:
+                    export_data.append({
+                        "Rank": item.get("rank"),
+                        "Name": item.get("name"),
+                        "Price": item.get("price", {}).get("value"),
+                        "Rating": item.get("rating"),
+                        "Rating Count": item.get("ratingCount"),
+                        "Shop Name": item.get("shopName"),
+                        "Location": item.get("location"),
+                        "AI Reason": item.get("reason"),
+                        "Shopee URL": item.get("url")
+                    })
+                export_df = pd.DataFrame(export_data)
+                csv_data = export_df.to_csv(index=False).encode('utf-8-sig')
+                
+                st.download_button(
+                    label="📥 Tải Báo Cáo CSV (Excel-ready)",
+                    data=csv_data,
+                    file_name=f"shopee_analysis_{keyword_input.replace(' ', '_')}.csv",
+                    mime="text/csv",
+                )
