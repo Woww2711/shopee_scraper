@@ -90,3 +90,17 @@ def clear_expired_cache(ttl_seconds: int = 3600):
     cursor.execute("DELETE FROM search_cache WHERE created_at < ?", (threshold,))
     conn.commit()
     conn.close()
+
+def get_recent_keywords(limit: int = 5):
+    """Lấy danh sách các từ khóa tìm kiếm gần đây từ cache"""
+    init_db()
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT keyword, country, sort_mode FROM search_cache 
+        GROUP BY keyword, country, sort_mode
+        ORDER BY max(created_at) DESC LIMIT ?
+    """, (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows

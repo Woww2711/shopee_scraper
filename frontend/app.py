@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 import html
 
 # Import trực tiếp các logic backend để chạy ứng dụng độc lập trên Streamlit Cloud
-from backend.database import get_cached_results, set_cached_results, clear_expired_cache
+from backend.database import get_cached_results, set_cached_results, clear_expired_cache, get_recent_keywords
 from backend.scraper import fetch_shopee_products
 from backend.scorer import filter_and_score_items
 from backend.ai_ranker import rank_products_with_gemini
@@ -133,32 +133,127 @@ def check_rate_limit(ip: str) -> bool:
 st.markdown('<div class="title-gradient">🛍️ Shopee Top 10 Product Analyzer</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle-text">Tìm kiếm, xếp hạng và đánh giá Top 10 sản phẩm Shopee tốt nhất bằng AI</div>', unsafe_allow_html=True)
 
+# Khởi tạo st.session_state nếu chưa có
+if "search_keyword" not in st.session_state:
+    st.session_state.search_keyword = "tai nghe bluetooth"
+if "search_country" not in st.session_state:
+    st.session_state.search_country = "VN"
+if "search_sort_mode" not in st.session_state:
+    st.session_state.search_sort_mode = "Mặc định (Cân bằng)"
+if "trigger_search" not in st.session_state:
+    st.session_state.trigger_search = False
+
 # Thanh tìm kiếm tối giản
 col_space_left, col_search, col_space_right = st.columns([1, 10, 1])
 
 with col_search:
-    col_kw, col_ct, col_btn = st.columns([7.5, 1.2, 1.8])
+    col_kw, col_ct, col_sm, col_btn = st.columns([4.8, 1.2, 2.2, 1.8])
     with col_kw:
         keyword_input = st.text_input(
             "Từ khóa sản phẩm:",
-            value="tai nghe bluetooth",
+            value=st.session_state.search_keyword,
             placeholder="Nhập tên sản phẩm cần tìm kiếm...",
             label_visibility="collapsed"
         )
     with col_ct:
+        countries = ["VN", "BR", "SG", "MY", "ID", "PH", "TH"]
+        country_index = countries.index(st.session_state.search_country) if st.session_state.search_country in countries else 0
         country_input = st.selectbox(
             "Thị trường:",
-            options=["VN", "BR", "SG", "MY", "ID", "PH", "TH"],
+            options=countries,
+            index=country_index,
             label_visibility="collapsed"
         )
+    with col_sm:
+        sort_modes = [
+            "Mặc định (Cân bằng)",
+            "Bán chạy nhất",
+            "Đánh giá tốt nhất",
+            "Sản phẩm tiềm năng"
+        ]
+        sort_mode_index = sort_modes.index(st.session_state.search_sort_mode) if st.session_state.search_sort_mode in sort_modes else 0
+        sort_mode_label = st.selectbox(
+            "Sắp xếp:",
+            options=sort_modes,
+            index=sort_mode_index,
+            label_visibility="collapsed"
+        )
+        sort_mode_map = {
+            "Mặc định (Cân bằng)": "default",
+            "Bán chạy nhất": "best_selling",
+            "Đánh giá tốt nhất": "best_rating",
+            "Sản phẩm tiềm năng": "opportunity"
+        }
     with col_btn:
-        search_clicked = st.button("🔍 Phân tích", type="primary", width="stretch")
+        search_clicked = st.button("🔍 Phân tích", type="primary", use_container_width=True)
+
+    # Hiển thị lịch sử tìm kiếm gần đây dạng tag ngang
+    try:
+        recent_queries = get_recent_keywords(limit=5)
+    except Exception:
+        recent_queries = []
+
+    if recent_queries:
+        st.markdown("<div style='margin-top: 10px; margin-bottom: 5px; font-size: 0.85rem; color: #888;'>🔍 Tìm kiếm gần đây:</div>", unsafe_allow_html=True)
+        
+        sm_display_map = {
+            "default": "Cân bằng",
+            "best_selling": "Bán chạy",
+            "best_rating": "Đánh giá tốt",
+            "opportunity": "Tiềm năng"
+        }
+        
+        num_tags = len(recent_queries)
+        ratios = [1.6] * num_tags + [10 - (1.6 * num_tags)]
+        cols_recent = st.columns(ratios)
+        
+        for i, (kw, ct, sm) in enumerate(recent_queries):
+            display_sm = sm_display_map.get(sm, "Cân bằng")
+            btn_label = f"{kw} ({ct} | {display_sm})"
+            if cols_recent[i].button(btn_label, key=f"recent_btn_{i}", use_container_width=True):
+                st.session_state.search_keyword = kw
+                st.session_state.search_country = ct
+                st.session_state.search_sort_mode = {
+                    "default": "Mặc định (Cân bằng)",
+                    "best_selling": "Bán chạy nhất",
+                    "best_rating": "Đánh giá tốt nhất",
+                    "opportunity": "Sản phẩm tiềm năng"
+                }.get(sm, "Mặc định (Cân bằng)")
+                st.session_state.trigger_search = True
+                st.rerun()
 
 # Logic tìm kiếm trực tiếp (không thông qua API HTTP)
-if search_clicked:
-    if not keyword_input.strip():
+if search_clicked or st.session_state.trigger_search:
+    # Reset trigger
+    st.session_state.trigger_search = False
+    
+    raw_keyword = keyword_input.strip() if search_clicked else st.session_state.search_keyword
+    raw_country = country_input.strip() if search_clicked else st.session_state.search_country
+    
+    if search_clicked:
+        sort_mode = sort_mode_map.get(sort_mode_label, "default")
+    else:
+        sort_mode_rev_map = {
+            "Mặc định (Cân bằng)": "default",
+            "Bán chạy nhất": "best_selling",
+            "Đánh giá tốt nhất": "best_rating",
+            "Sản phẩm tiềm năng": "opportunity"
+        }
+        sort_mode = sort_mode_rev_map.get(st.session_state.search_sort_mode, "default")
+
+    if not raw_keyword:
         st.warning("⚠️ Vui lòng nhập từ khóa tìm kiếm!")
     else:
+        # Đồng bộ session_state
+        st.session_state.search_keyword = raw_keyword
+        st.session_state.search_country = raw_country
+        st.session_state.search_sort_mode = {
+            "default": "Mặc định (Cân bằng)",
+            "best_selling": "Bán chạy nhất",
+            "best_rating": "Đánh giá tốt nhất",
+            "opportunity": "Sản phẩm tiềm năng"
+        }.get(sort_mode, "Mặc định (Cân bằng)")
+
         # Lấy IP client từ Streamlit headers
         try:
             client_ip = st.context.headers.get("x-forwarded-for", "127.0.0.1").split(",")[0].strip()
@@ -171,9 +266,8 @@ if search_clicked:
             with st.spinner("🚀 Đang phân tích dữ liệu Shopee và xếp hạng bằng AI..."):
                 start_time = time.time()
                 
-                keyword = keyword_input.lower().strip()
-                country = country_input.upper().strip()
-                sort_mode = "default"
+                keyword = raw_keyword.lower().strip()
+                country = raw_country.upper().strip()
                 ttl = int(os.getenv("CACHE_TTL_SECONDS", 3600))
                 
                 # 1. Kiểm tra cache SQLite
