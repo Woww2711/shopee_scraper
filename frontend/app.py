@@ -8,6 +8,7 @@ import altair as alt
 import time
 from collections import defaultdict
 from dotenv import load_dotenv
+import html
 
 # Import trực tiếp các logic backend để chạy ứng dụng độc lập trên Streamlit Cloud
 from backend.database import get_cached_results, set_cached_results, clear_expired_cache
@@ -291,24 +292,41 @@ if search_clicked:
                         
                         # Render HTML card
                         image_url = images[0] if images else "https://via.placeholder.com/150"
+                        if not image_url.startswith(("http://", "https://")):
+                            image_url = "https://via.placeholder.com/150"
+                        
+                        if not url.startswith(("http://", "https://")):
+                            url_cleaned = "#"
+                        else:
+                            url_cleaned = url
+
+                        # Escape dynamic values to prevent XSS
+                        name_esc = html.escape(name or "")
+                        url_esc = html.escape(url_cleaned or "#")
+                        image_url_esc = html.escape(image_url or "")
+                        price_formatted_esc = html.escape(price_formatted or "")
+                        shop_name_esc = html.escape(shop_name or "")
+                        location_esc = html.escape(location or "")
+                        reason_esc = html.escape(reason or "")
+
                         html_content = f"""
                         <div class="product-row">
                             <div style="display: flex; align-items: center;">
                                 <div class="rank-badge">#{rank}</div>
                             </div>
-                            <img src="{image_url}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px;" />
+                            <img src="{image_url_esc}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px;" />
                             <div style="flex: 1;">
-                                <h4 style="margin: 0 0 8px 0;"><a href="{url}" target="_blank" style="color: #FF4B4B; text-decoration: none;">{name}</a></h4>
+                                <h4 style="margin: 0 0 8px 0;"><a href="{url_esc}" target="_blank" style="color: #FF4B4B; text-decoration: none;">{name_esc}</a></h4>
                                 <div style="margin-bottom: 8px;">
-                                    <span class="stat-badge">💰 Giá bán: {price_formatted}</span>
+                                    <span class="stat-badge">💰 Giá bán: {price_formatted_esc}</span>
                                     <span class="stat-badge">⭐ Đánh giá: {rating}/5.0</span>
                                     <span class="stat-badge">💬 Phản hồi: {rating_count:,} lượt</span>
                                 </div>
                                 <div style="font-size: 0.85rem; color: #777;">
-                                    🏪 Shop: <strong>{shop_name}</strong> | 📍 Khu vực: <strong>{location}</strong>
+                                    🏪 Shop: <strong>{shop_name_esc}</strong> | 📍 Khu vực: <strong>{location_esc}</strong>
                                 </div>
                                 <div class="ai-reason-box">
-                                    💡 <strong>Lý do AI khuyên chọn:</strong> {reason}
+                                    💡 <strong>Lý do AI khuyên chọn:</strong> {reason_esc}
                                 </div>
                             </div>
                         </div>

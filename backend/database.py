@@ -1,7 +1,7 @@
 import sqlite3
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cache.db")
 
@@ -58,7 +58,7 @@ def get_cached_results(keyword: str, country: str, sort_mode: str, ttl_seconds: 
             except ValueError:
                 return None
                 
-        age = datetime.utcnow() - created_at
+        age = datetime.now(timezone.utc).replace(tzinfo=None) - created_at
         if age.total_seconds() < ttl_seconds:
             return json.loads(data_str)
             
@@ -70,7 +70,7 @@ def set_cached_results(keyword: str, country: str, sort_mode: str, data: dict):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
-    now_str = datetime.utcnow().isoformat()
+    now_str = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     data_str = json.dumps(data, ensure_ascii=False)
     
     cursor.execute("""
@@ -86,7 +86,7 @@ def clear_expired_cache(ttl_seconds: int = 3600):
     init_db()
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    threshold = (datetime.utcnow() - timedelta(seconds=ttl_seconds)).isoformat()
+    threshold = (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=ttl_seconds)).isoformat()
     cursor.execute("DELETE FROM search_cache WHERE created_at < ?", (threshold,))
     conn.commit()
     conn.close()

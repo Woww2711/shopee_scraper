@@ -43,12 +43,15 @@ def filter_and_score_items(items: List[Dict[str, Any]], sort_mode: str = "defaul
         images = item.get("images", [])
         
         # Lọc cứng tối thiểu:
-        # - Rating dưới 4.0 → loại (chất lượng kém)
-        # - Lượt đánh giá dưới 5 → loại (chưa được thị trường kiểm chứng)
+        # - Rating dưới 4.0 hoặc không có rating → loại (chất lượng kém / chưa có đánh giá)
+        # - Lượt đánh giá dưới 5 hoặc không có lượt đánh giá → loại (chưa được thị trường kiểm chứng)
         # - Không có hình ảnh sản phẩm → loại
-        if rating is not None and rating < 4.0:
+        rating_val = rating if rating is not None else 0.0
+        review_count_val = review_count if review_count is not None else 0
+        
+        if rating_val < 4.0:
             continue
-        if review_count is not None and review_count < 5:
+        if review_count_val < 5:
             continue
         if not images or len(images) == 0:
             continue
