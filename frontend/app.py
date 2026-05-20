@@ -151,7 +151,7 @@ with col_search:
             label_visibility="collapsed"
         )
     with col_btn:
-        search_clicked = st.button("🔍 Phân tích", type="primary", use_container_width=True)
+        search_clicked = st.button("🔍 Phân tích", type="primary", width="stretch")
 
 # Logic tìm kiếm trực tiếp (không thông qua API HTTP)
 if search_clicked:
@@ -326,7 +326,7 @@ if search_clicked:
                             x=alt.X('Giá trị (₫):Q', title='Giá bán (VND)'),
                             y=alt.Y('Sản phẩm:N', sort=None, title='Sản phẩm')
                         ).properties(height=350)
-                        st.altair_chart(bar_chart, use_container_width=True)
+                        st.altair_chart(bar_chart, width="stretch")
                         
                     with col_chart2:
                         st.subheader("Số lượt đánh giá")
@@ -334,7 +334,7 @@ if search_clicked:
                             x=alt.X('Số lượt đánh giá:Q', title='Lượt đánh giá (review_count)'),
                             y=alt.Y('Sản phẩm:N', sort=None, title='Sản phẩm')
                         ).properties(height=350)
-                        st.altair_chart(point_chart, use_container_width=True)
+                        st.altair_chart(point_chart, width="stretch")
 
                     # Export CSV
                     st.markdown("### 💾 Xuất dữ liệu")
