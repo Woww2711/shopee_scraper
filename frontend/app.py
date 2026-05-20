@@ -9,8 +9,19 @@ import time
 from collections import defaultdict
 from dotenv import load_dotenv
 import html
+import importlib
 
 # Import trực tiếp các logic backend để chạy ứng dụng độc lập trên Streamlit Cloud
+import backend.database
+import backend.scraper
+import backend.scorer
+import backend.ai_ranker
+
+importlib.reload(backend.database)
+importlib.reload(backend.scraper)
+importlib.reload(backend.scorer)
+importlib.reload(backend.ai_ranker)
+
 from backend.database import get_cached_results, set_cached_results, clear_expired_cache, get_recent_keywords
 from backend.scraper import fetch_shopee_products
 from backend.scorer import filter_and_score_items
@@ -263,7 +274,8 @@ if search_clicked or st.session_state.trigger_search:
         if not check_rate_limit(client_ip):
             st.error("❌ Bạn đã vượt quá giới hạn lượt tìm kiếm cho phép (tối đa 5 lần/phút). Vui lòng thử lại sau ít phút.")
         else:
-            with st.spinner("🚀 Đang phân tích dữ liệu Shopee và xếp hạng bằng AI..."):
+            # Sử dụng st.status để tạo UI cập nhật động premium
+            with st.status("🚀 Đang chuẩn bị phân tích dữ liệu...", expanded=True) as status_box:
                 start_time = time.time()
                 
                 keyword = raw_keyword.lower().strip()
@@ -271,27 +283,39 @@ if search_clicked or st.session_state.trigger_search:
                 ttl = int(os.getenv("CACHE_TTL_SECONDS", 3600))
                 
                 # 1. Kiểm tra cache SQLite
+                status_box.write("🔍 Đang kiểm tra bộ nhớ đệm (Cache)...")
                 cached_data = get_cached_results(keyword, country, sort_mode, ttl_seconds=ttl)
                 
                 final_data = None
                 is_cached = False
                 
                 if cached_data:
+                    status_box.write("⚡ Phát hiện kết quả phù hợp trong bộ nhớ đệm (Cache hit).")
                     final_data = cached_data
                     is_cached = True
+                    status_box.update(label="✅ Đã tải kết quả từ Cache!", state="complete")
                 else:
                     # Cache miss: chạy các module backend
-                    raw_products = fetch_shopee_products(keyword, country, max_items=40)
+                    status_box.write("🌐 Bộ nhớ đệm trống. Đang gửi yêu cầu cào dữ liệu đến Apify...")
+                    
+                    # Định nghĩa callback để cập nhật tiến trình từ Apify Scraper vào Streamlit status_box
+                    def apify_callback(msg):
+                        status_box.write(msg)
+                        
+                    raw_products = fetch_shopee_products(keyword, country, max_items=40, status_callback=apify_callback)
                     
                     if not raw_products:
+                        status_box.update(label="⚠️ Không tìm thấy sản phẩm trên Shopee!", state="error")
                         st.warning(f"Không tìm thấy sản phẩm nào trên Shopee với từ khóa '{keyword}' tại quốc gia {country}.")
                     else:
+                        status_box.write(f"📊 Thu thập được {len(raw_products)} sản phẩm. Đang chạy thuật toán lọc chất lượng & chấm điểm...")
                         filtered_and_scored = filter_and_score_items(raw_products, sort_mode)
                         
                         if not filtered_and_scored:
+                            status_box.update(label="⚠️ Không có sản phẩm đạt chất lượng tối thiểu!", state="error")
                             st.warning("Tất cả sản phẩm tìm thấy đều không đạt tiêu chuẩn lọc tối thiểu.")
                         else:
-                            # Phân tích xếp hạng qua Gemini
+                            status_box.write("🧠 Đang gọi AI Gemini để phân tích bối cảnh thị trường và xếp hạng Top 10...")
                             ai_result = rank_products_with_gemini(keyword, filtered_and_scored, sort_mode)
                             
                             # Map dữ liệu gốc với kết quả AI
@@ -335,11 +359,14 @@ if search_clicked or st.session_state.trigger_search:
                             }
                             
                             # Lưu vào Cache
+                            status_box.write("💾 Đang cập nhật dữ liệu phân tích vào SQLite Cache...")
                             set_cached_results(keyword, country, sort_mode, final_data)
                             try:
                                 clear_expired_cache(ttl_seconds=ttl)
                             except Exception:
                                 pass
+                                
+                            status_box.update(label="✅ Phân tích thành công!", state="complete")
                 
                 duration = round(time.time() - start_time, 2)
                 
