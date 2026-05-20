@@ -65,17 +65,21 @@ def rank_products_with_gemini(keyword: str, items: List[Dict[str, Any]], sort_mo
     # Chỉ gửi các trường thông tin cần thiết đến AI để tiết kiệm tokens
     simplified_items = []
     for idx, item in enumerate(items[:30]):  # Gửi tối đa 30 sản phẩm hàng đầu sau khi đã lọc & chấm điểm
+        name = item.get("name", "")
+        name_trimmed = (name[:57] + "...") if len(name) > 60 else name
+        
+        shop = item.get("shopName", "")
+        shop_trimmed = (shop[:37] + "...") if len(shop) > 40 else shop
+        
         simplified_items.append({
             "itemId": item.get("itemId"),
-            "name": item.get("name"),
+            "name": name_trimmed,
             "price": item.get("price", {}).get("formatted"),
-            "price_value": item.get("price", {}).get("value"),
             "rating": item.get("rating"),
-            "ratingCount": item.get("ratingCount"),
-            "shopName": item.get("shopName"),
-            "brand": item.get("brand"),
-            "location": item.get("location"),
-            "calculated_score": item.get("calculated_score")
+            "reviews": item.get("ratingCount"),
+            "shop": shop_trimmed,
+            "loc": item.get("location"),
+            "score": item.get("calculated_score")
         })
 
     user_prompt = f"""
